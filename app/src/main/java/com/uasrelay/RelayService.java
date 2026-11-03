@@ -34,6 +34,7 @@ import com.uasrelay.tak.MulticastCot;
 import com.uasrelay.tak.TakChannels;
 import com.uasrelay.tak.TakClient;
 import com.uasrelay.video.ScreenStreamer;
+import com.uasrelay.video.VideoProfile;
 
 import java.io.File;
 
@@ -215,13 +216,20 @@ public class RelayService extends Service {
         cfg.srt = prefs.mtxSrt;
         cfg.srtPort = prefs.mtxSrtPort;
         cfg.srtLink = prefs.mtxSrtLink;
-        cfg.bitrateBps = prefs.bitrateKbps * 1000;
+        VideoProfile video = prefs.lowBandwidth
+                ? VideoProfile.lowBandwidth(prefs.bitrateKbps * 1000)
+                : VideoProfile.full(prefs.bitrateKbps * 1000);
+        cfg.width = video.width;
+        cfg.height = video.height;
+        cfg.fps = video.fps;
+        cfg.bitrateBps = video.bitrateBps;
         cfg.cropToFly = prefs.cropToFly;
         cfg.flyLeftPct = prefs.flyLeftPct;
 
         Rect bounds = getSystemService(WindowManager.class).getMaximumWindowMetrics().getBounds();
         streamer = new ScreenStreamer(this, cfg, (streaming, text) -> handler.post(() -> {
-            if (streaming) setVideo(STATE_OK, "Live → " + prefs.mtxHost + "/" + prefs.mtxPath);
+            if (streaming) setVideo(STATE_OK, "Live → " + prefs.mtxHost + "/" + prefs.mtxPath
+                    + (prefs.lowBandwidth ? " (" + video.height + "p" + video.fps + ")" : ""));
             else if (text.startsWith("Connecting") || text.contains("retrying")) setVideo(STATE_PENDING, text);
             else setVideo(STATE_ERROR, text);
         }));
