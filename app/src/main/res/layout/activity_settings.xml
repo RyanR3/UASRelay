@@ -59,6 +59,28 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="The MediaMTX server the live view is sent to." />
+                    <com.google.android.material.button.MaterialButtonToggleGroup
+                        android:id="@+id/mtxProtocol"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        app:singleSelection="true"
+                        app:selectionRequired="true">
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/protoRtsp"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="RTSP" />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/protoSrt"
+                            style="?attr/materialButtonOutlinedStyle"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="SRT" />
+                    </com.google.android.material.button.MaterialButtonToggleGroup>
                     <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
                         android:hint="Server address">
                         <com.google.android.material.textfield.TextInputEditText
@@ -72,11 +94,24 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal">
                         <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                            android:id="@+id/mtxPortLayout"
                             android:layout_width="0dp"
                             android:layout_weight="1"
                             android:hint="Port">
                             <com.google.android.material.textfield.TextInputEditText
                                 android:id="@+id/mtxPort"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="number" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                        <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                            android:id="@+id/mtxSrtPortLayout"
+                            android:layout_width="0dp"
+                            android:layout_marginStart="10dp"
+                            android:layout_weight="1"
+                            android:hint="SRT">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/mtxSrtPort"
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 android:inputType="number" />
@@ -120,6 +155,17 @@
                                 android:inputType="textPassword" />
                         </com.google.android.material.textfield.TextInputLayout>
                     </LinearLayout>
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/mtxSrtLink"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Viewers watch over SRT too" />
+                    <TextView style="@style/RelayHelp"
+                        android:id="@+id/mtxSrtLinkHelp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Off: the map marker links the RTSP stream, which every TAK app plays. MediaMTX serves an SRT upload over both." />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -192,6 +238,17 @@
                                     android:layout_height="wrap_content"
                                     android:inputType="number" />
                             </com.google.android.material.textfield.TextInputLayout>
+                            <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                                android:layout_width="0dp"
+                                android:layout_marginStart="10dp"
+                                android:layout_weight="1"
+                                android:hint="API port">
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/takApiPort"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="number" />
+                            </com.google.android.material.textfield.TextInputLayout>
                         </LinearLayout>
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -229,6 +286,36 @@
                             android:text="Get certificate" />
                         <TextView
                             android:id="@+id/enrollStatus"
+                            style="@style/RelayHelp"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:gravity="center" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="16dp"
+                            android:text="Channels"
+                            android:textAppearance="?attr/textAppearanceTitleSmall"
+                            android:textColor="@color/text" />
+                        <TextView style="@style/RelayHelp"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Who sees the drone. Channels belong to your TAK account, so changing them here changes them on any other device signed in as you." />
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/loadChannels"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Choose channels" />
+                        <LinearLayout
+                            android:id="@+id/channelList"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="vertical" />
+                        <TextView
+                            android:id="@+id/channelStatus"
                             style="@style/RelayHelp"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -293,7 +380,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
-                        android:text="Send video over TCP" />
+                        android:text="Send RTSP over TCP" />
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/cropToFly"
                         android:layout_width="match_parent"

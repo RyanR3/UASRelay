@@ -2,6 +2,8 @@ package com.uasrelay.video;
 
 import android.content.Context;
 import android.media.projection.MediaProjection;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -11,26 +13,35 @@ import com.pedro.encoder.input.gl.render.filters.CropFilterRender;
 import com.pedro.encoder.input.sources.OrientationForced;
 import com.pedro.encoder.input.sources.audio.NoAudioSource;
 import com.pedro.encoder.input.sources.video.ScreenSource;
+import com.pedro.library.base.StreamBase;
 import com.pedro.library.rtsp.RtspStream;
+import com.pedro.library.srt.SrtStream;
 import com.pedro.library.util.streamclient.RtspStreamClient;
+import com.pedro.library.util.streamclient.StreamBaseClient;
 import com.pedro.rtsp.rtsp.Protocol;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
 /**
- * ScreenStreamer — DJI Fly's live view → H.264 → RTSP push to MediaMTX.
+ * ScreenStreamer — DJI Fly's live view → H.264 → RTSP or SRT push to MediaMTX.
  *
  * Consumer DJI drones (Neo, Avata, Mini…) are not all in DJI MSDK, so there is no camera feed to tap: we mirror the screen
  * with MediaProjection (RootEncoder's ScreenSource), crop to Fly's 16:9 picture with
- * CropFilterRender ({@link FlyCrop}), and push with RootEncoder's RtspStream — the same
- * library and retry/advertise rules as ATAKPilot2's DroneVideoStreamer.
+ * CropFilterRender ({@link FlyCrop}), and push with RootEncoder's RtspStream or SrtStream —
+ * the same library and retry/advertise rules as ATAKPilot2's DroneVideoStreamer.
+ *
+ * SRT copes better with a lossy uplink (LTE, mesh). MediaMTX re-serves an SRT push over
+ * RTSP too, so the map marker can keep the RTSP link every ATAK plays.
  *
  * The advertised url is only reported once the push actually connects, so CoT never
  * carries a link that opens nothing.
  */
 public class ScreenStreamer {
     private static final String TAG = "ScreenStreamer";
+    /** RootEncoder's SRT client waits forever for a handshake reply; give up after this. */
+    private static final long SRT_CONNECT_TIMEOUT_MS = 10_000;
+    private static final long RETRY_DELAY_MS = 5_000;
 
     public interface Listener {
         /** @param streaming true once MediaMTX accepted the push */
@@ -44,6 +55,11 @@ public class ScreenStreamer {
         public String username = "";
         public String password = "";
         public boolean tcp = true;
+        /** Push over SRT instead of RTSP. */
+        public boolean srt = false;
+        public int srtPort = 8890;
+        /** With SRT, give viewers the SRT link too; otherwise they get RTSP on {@link #port}. */
+        public boolean srtLink = false;
         public int width = 1920;
         public int height = 1080;
         public int fps = 30;
@@ -53,17 +69,29 @@ public class ScreenStreamer {
 
         private String cleanPath() { return path.replaceAll("^/+|/+$", ""); }
 
-        public String pushUrl() { return "rtsp://" + host + ":" + port + "/" + cleanPath(); }
+        public String pushUrl() {
+            return srt ? srtUrl("publish", password)
+                    : "rtsp://" + host + ":" + port + "/" + cleanPath();
+        }
 
         /** What viewers pull: creds inline and ?tcp, the UAS-tool style ATAK understands. */
         public String advertiseUrl() {
+            if (srt && srtLink) return srtUrl("read", password);
             String cred = username.isEmpty() ? "" : enc(username) + ":" + enc(password) + "@";
             return "rtsp://" + cred + host + ":" + port + "/" + cleanPath() + (tcp ? "?tcp" : "");
         }
 
+        /** The push url with the password masked, for logs and status text. */
         public String urlSafe() {
+            if (srt) return srtUrl("publish", "***");
             String who = username.isEmpty() ? "" : username + ":***@";
             return "rtsp://" + who + host + ":" + port + "/" + cleanPath() + (tcp ? "?tcp" : "");
+        }
+
+        /** MediaMTX SRT addressing: streamid=action:path[:user:pass]. */
+        private String srtUrl(String action, String pass) {
+            String id = action + ":" + cleanPath() + (username.isEmpty() ? "" : ":" + username + ":" + pass);
+            return "srt://" + host + ":" + srtPort + "?streamid=" + id;
         }
 
         private static String enc(String s) {
@@ -74,8 +102,11 @@ public class ScreenStreamer {
     private final Context context;
     private final Config config;
     private final Listener listener;
-    private RtspStream stream;
+    private StreamBase stream;
     private volatile boolean streaming;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    /** Set while we restart an unanswered SRT push, so its disconnect isn't shown as an error. */
+    private volatile boolean restarting;
 
     public ScreenStreamer(Context context, Config config, Listener listener) {
         this.context = context.getApplicationContext();
@@ -93,18 +124,20 @@ public class ScreenStreamer {
         }
 
         @Override public void onConnectionSuccess() {
+            handler.removeCallbacks(srtTimeout);
             streaming = true;
             listener.onStreamState(true, "Streaming → " + config.urlSafe());
         }
 
         @Override public void onConnectionFailed(@NonNull String reason) {
             streaming = false;
+            if (restarting) return;
             Log.w(TAG, "connection failed: " + reason);
             // setReTries alone is inert — RootEncoder only retries when asked here.
-            RtspStream s = stream;
+            StreamBase s = stream;
             boolean retried = false;
             try {
-                retried = s != null && s.getStreamClient().reTry(5000, reason);
+                retried = s != null && s.getStreamClient().reTry(RETRY_DELAY_MS, reason);
             } catch (Throwable ignored) {}
             listener.onStreamState(false, retried
                     ? "Stream failed (" + reason + "), retrying…"
@@ -113,6 +146,7 @@ public class ScreenStreamer {
 
         @Override public void onDisconnect() {
             streaming = false;
+            if (restarting) return;
             listener.onStreamState(false, "Stream disconnected");
         }
 
@@ -125,6 +159,33 @@ public class ScreenStreamer {
     };
 
     /**
+     * An SRT server that never answers (UDP port closed, SRT off in MediaMTX) leaves the
+     * handshake pending with no callback. Restart the push so the status says so.
+     */
+    private final Runnable srtTimeout = new Runnable() {
+        @Override public void run() {
+            StreamBase s = stream;
+            if (s == null || streaming) return;
+            Log.w(TAG, "no SRT handshake reply from " + config.host + ":" + config.srtPort);
+            // reTry tears the pending connect down, which reports a "cancelled" failure and
+            // disconnect; those belong to this retry, not a new one.
+            restarting = true;
+            handler.postDelayed(() -> restarting = false, RETRY_DELAY_MS / 2);
+            boolean retried = false;
+            try {
+                retried = s.getStreamClient().reTry(RETRY_DELAY_MS, "no SRT answer");
+            } catch (Throwable ignored) {}
+            String where = "SRT server " + config.host + ":" + config.srtPort + " (UDP)";
+            if (retried) {
+                listener.onStreamState(false, "No answer from " + where + ", retrying…");
+                handler.postDelayed(this, RETRY_DELAY_MS + SRT_CONNECT_TIMEOUT_MS);
+            } else {
+                listener.onStreamState(false, "Stream failed: no answer from " + where);
+            }
+        }
+    };
+
+    /**
      * Start mirroring + pushing. Must be called from a foreground service of type
      * mediaProjection that already holds {@code projection}.
      *
@@ -133,11 +194,22 @@ public class ScreenStreamer {
     public void start(MediaProjection projection, int screenW, int screenH) {
         try {
             ScreenSource source = new ScreenSource(context, projection);
-            RtspStream s = new RtspStream(context, connectChecker, source, new NoAudioSource());
-            RtspStreamClient client = s.getStreamClient();
-            client.setProtocol(config.tcp ? Protocol.TCP : Protocol.UDP);
+            StreamBase s;
+            StreamBaseClient client;
+            if (config.srt) {
+                // Credentials travel in the streamid (see Config.srtUrl), not setAuthorization.
+                SrtStream srt = new SrtStream(context, connectChecker, source, new NoAudioSource());
+                client = srt.getStreamClient();
+                s = srt;
+            } else {
+                RtspStream rtsp = new RtspStream(context, connectChecker, source, new NoAudioSource());
+                RtspStreamClient rtspClient = rtsp.getStreamClient();
+                rtspClient.setProtocol(config.tcp ? Protocol.TCP : Protocol.UDP);
+                if (!config.username.isEmpty()) rtspClient.setAuthorization(config.username, config.password);
+                client = rtspClient;
+                s = rtsp;
+            }
             client.setOnlyVideo(true);
-            if (!config.username.isEmpty()) client.setAuthorization(config.username, config.password);
             client.setReTries(10);
             client.setLogs(false); // per-packet logging floods logcat at 30 fps
 
@@ -166,7 +238,8 @@ public class ScreenStreamer {
             }
             stream = s;
             s.startStream(config.pushUrl());
-            Log.i(TAG, "push=" + config.pushUrl() + "  advertise=" + config.urlSafe());
+            if (config.srt) handler.postDelayed(srtTimeout, SRT_CONNECT_TIMEOUT_MS);
+            Log.i(TAG, "push=" + config.urlSafe());
             listener.onStreamState(false, "Connecting to " + config.urlSafe());
         } catch (Throwable t) {
             Log.e(TAG, "start failed", t);
@@ -176,7 +249,8 @@ public class ScreenStreamer {
     }
 
     public void stop() {
-        RtspStream s = stream;
+        handler.removeCallbacksAndMessages(null);
+        StreamBase s = stream;
         stream = null;
         streaming = false;
         if (s == null) return;

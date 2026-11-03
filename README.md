@@ -17,14 +17,17 @@ on screen.
 ## Features
 
 - **One button.** Tap Start, switch to your flight app, fly. Stop from the app or the notification.
-- **Live video to TAK.** H.264 over RTSP (TCP or UDP) pushed to MediaMTX, cropped to the
-  flight app's picture so the on-screen controls aren't in the feed.
+- **Live video to TAK.** H.264 pushed to MediaMTX over **RTSP** (TCP or UDP) or **SRT**,
+  cropped to the flight app's picture so the on-screen controls aren't in the feed. SRT holds
+  up better on a lossy uplink (LTE, mesh); MediaMTX re-serves it over RTSP, so the map marker
+  keeps a link every TAK app plays.
 - **Drone marker with the video attached.** A UAS-type CoT track carrying the stream link,
   refreshed every 2 seconds.
 - **Two ways to send the marker** — use either or both:
   - **Local network / mesh** (SA multicast 239.2.3.1:6969), no server needed.
   - **TAK Server** over TLS with a client certificate. Scan your server's QR code to fill it in
     and get the certificate in one step, or enter it by hand.
+  - **Channels:** choose which TAK Server channels (groups) the drone is shared to.
 - **Real drone position when available.** Listens for the drone's broadcast Remote ID
   (Bluetooth and Wi-Fi). When none is heard, the marker sits at the phone's GPS position.
 - **Status at a glance** for video, map marker and position.
@@ -35,6 +38,7 @@ on screen.
 - A [MediaMTX](https://github.com/bluenviron/mediamtx) server reachable from the phone (and from
   the TAK users who will watch).
 - For TAK Server: certificate enrollment enabled (port 8446 by default) and a user account.
+  Channel selection uses the TAK Server API (port 8443).
 
 ## Install
 
@@ -45,11 +49,15 @@ flight app.
 
 1. Open **Settings** (gear icon).
 2. **Drone name** — the callsign shown on the TAK map.
-3. **Video server** — your MediaMTX address, port (8554), stream name and login if it has one.
+3. **Video server** — pick RTSP or SRT, then your MediaMTX address, port (RTSP 8554, SRT
+   8890), stream name and login if it has one. SRT needs UDP 8890 open to the server.
 4. **Map marker** — turn on multicast, TAK Server, or both. For TAK Server, tap
    **Scan TAK Server QR code** (ATAK enrollment or iTAK connection QR), or type the address,
    username and password and tap **Get certificate**. The password is used once to get the
-   certificate and isn't saved.
+   certificate and isn't saved. Optionally tap **Choose channels** and tick the channels the
+   drone should appear on. Channels belong to the TAK account, so other devices signed in with
+   the same login see the change — a dedicated account for the drone avoids that. Until you
+   tick a channel here, the server's current channels are left as they are.
 5. Go back and tap **Start**. Android asks to share the screen; choose **entire screen**.
 6. Switch to your flight app and keep it on screen while you fly.
 

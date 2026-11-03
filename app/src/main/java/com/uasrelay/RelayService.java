@@ -31,6 +31,7 @@ import com.uasrelay.rid.RidScanner;
 import com.uasrelay.rid.WifiRidScanner;
 import com.uasrelay.tak.CotBuilder;
 import com.uasrelay.tak.MulticastCot;
+import com.uasrelay.tak.TakChannels;
 import com.uasrelay.tak.TakClient;
 import com.uasrelay.video.ScreenStreamer;
 
@@ -39,7 +40,7 @@ import java.io.File;
 /**
  * RelayService — foreground service that runs the whole pipeline while DJI Fly is in front:
  *
- *   screen (Fly live view) → crop → H.264 → RTSP push to MediaMTX   ({@link ScreenStreamer})
+ *   screen (Fly live view) → crop → H.264 → RTSP/SRT push to MediaMTX  ({@link ScreenStreamer})
  *   position: broadcast Remote ID when the drone is heard, else the phone's GPS
  *   CoT: one drone track carrying {@code <__video>} → TAK Server and/or SA multicast
  *
@@ -60,6 +61,10 @@ public class RelayService extends Service {
     public static final String EXTRA_RESULT_DATA = "resultData";
     /** Notification "Stop" button. */
     public static final String ACTION_STOP = "com.uasrelay.STOP";
+    /** Settings changed the TAK channels while we run: send the new set to the server. */
+    public static final String ACTION_APPLY_CHANNELS = "com.uasrelay.APPLY_CHANNELS";
+    /** The server only knows our clientUid once a CoT has gone out on the connection. */
+    private static final long CHANNELS_AFTER_CONNECT_MS = 3000;
 
     /** Broadcast back to the UI so the main screen shows live state. */
     public static final String ACTION_STATUS = "com.uasrelay.STATUS";
@@ -101,6 +106,8 @@ public class RelayService extends Service {
     private String videoText = "Starting…";
     private int videoState = STATE_PENDING;
     private String takText = "";
+    /** " · 3 channels" once the server has told us, appended to the TAK status. */
+    private String channelsText = "";
     private int takState = STATE_OFF;
     private String positionText = "Waiting for GPS…";
     private int positionState = STATE_PENDING;
@@ -141,6 +148,15 @@ public class RelayService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
             stopSelf();
+            return START_NOT_STICKY;
+        }
+        if (intent != null && ACTION_APPLY_CHANNELS.equals(intent.getAction())) {
+            if (projection != null) {
+                prefs = Prefs.load(this);
+                if (takConnected) applyChannels();
+            } else {
+                stopSelf(); // not running: nothing to apply to
+            }
             return START_NOT_STICKY;
         }
 
@@ -196,6 +212,9 @@ public class RelayService extends Service {
         cfg.username = prefs.mtxUser;
         cfg.password = prefs.mtxPass;
         cfg.tcp = prefs.mtxTcp;
+        cfg.srt = prefs.mtxSrt;
+        cfg.srtPort = prefs.mtxSrtPort;
+        cfg.srtLink = prefs.mtxSrtLink;
         cfg.bitrateBps = prefs.bitrateKbps * 1000;
         cfg.cropToFly = prefs.cropToFly;
         cfg.flyLeftPct = prefs.flyLeftPct;
@@ -244,9 +263,47 @@ public class RelayService extends Service {
         takConnected = connected;
         handler.post(() -> {
             takState = connected ? STATE_OK : STATE_PENDING;
-            takText = connected ? "TAK Server" : "TAK Server reconnecting…";
+            takText = connected ? "TAK Server" + channelsText : "TAK Server reconnecting…";
             report();
+            // Every (re)connect: the server ties channels to this connection's uid.
+            handler.removeCallbacks(applyChannelsTask);
+            if (connected) handler.postDelayed(applyChannelsTask, CHANNELS_AFTER_CONNECT_MS);
         });
+    }
+
+    private final Runnable applyChannelsTask = this::applyChannels;
+
+    /**
+     * Send the channels picked in Settings, or — if none were picked — just read the
+     * server's selection for the status line. Runs the HTTPS calls off the main thread.
+     */
+    private void applyChannels() {
+        Prefs p = prefs;
+        File trust = new File(getFilesDir(), "tak_truststore.p12");
+        File client = new File(getFilesDir(), "tak_clientcert.p12");
+        new Thread(() -> {
+            String text;
+            try {
+                TakChannels api = new TakChannels(p.takHost, p.takApiPort,
+                        trust.getAbsolutePath(), client.getAbsolutePath(), P12_PASSWORD);
+                if (p.takChannelsChosen) api.apply(uid, p.takChannels);
+                int on = 0;
+                for (TakChannels.Channel c : api.list()) if (c.active) on++;
+                text = " · " + on + (on == 1 ? " channel" : " channels");
+                Log.i(TAG, (p.takChannelsChosen ? "applied " : "server has ") + on + " active channel(s)");
+            } catch (Exception e) {
+                Log.w(TAG, "channels: " + e.getMessage());
+                text = p.takChannelsChosen ? " · channels not set (" + e.getMessage() + ")" : "";
+            }
+            String t = text;
+            handler.post(() -> {
+                channelsText = t;
+                if (takConnected && !destroyed) {
+                    takText = "TAK Server" + channelsText;
+                    report();
+                }
+            });
+        }, "TakChannels").start();
     }
 
     @SuppressLint("MissingPermission") // MainActivity requests location before starting us

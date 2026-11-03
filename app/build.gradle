@@ -17,8 +17,8 @@ android {
         // control for broadcast Remote ID, and the public Wi-Fi IE API.
         minSdk 33
         targetSdk 35
-        versionCode 10000
-        versionName "1.0.0"
+        versionCode 10100
+        versionName "1.1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -69,5 +69,7 @@ dependencies {
 
     // CotBuilder/RidParser are pure Java (no Android deps) and covered by JVM unit tests.
     testImplementation 'junit:junit:4.13.2'
+    // Real org.json for JVM tests (android.jar's is a stub).
+    testImplementation 'org.json:json:20231013'
 }
 

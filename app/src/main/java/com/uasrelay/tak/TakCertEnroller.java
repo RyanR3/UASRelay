@@ -34,6 +34,8 @@ import org.json.JSONObject;
 public class TakCertEnroller {
     private static final String TAG = "TakCertEnroller";
     private static final String DEFAULT_P12_PASSWORD = "atakatak";
+    /** Password of the PKCS12 stores enroll() writes. */
+    public static final String P12_PASSWORD = DEFAULT_P12_PASSWORD;
 
     public interface EnrollmentCallback {
         void onSuccess(String trustStorePath, String clientCertPath);

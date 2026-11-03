@@ -5,6 +5,9 @@ import android.content.SharedPreferences;
 import android.os.Build;
 import android.provider.Settings;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import com.uasrelay.video.FlyCrop;
 
 /** All UAS Relay settings, persisted so the service reads exactly what the UI last saved. */
@@ -20,6 +23,11 @@ public final class Prefs {
     public String mtxUser = "";
     public String mtxPass = "";
     public boolean mtxTcp = true;
+    /** Push protocol: SRT when true, RTSP otherwise. */
+    public boolean mtxSrt = false;
+    public int mtxSrtPort = 8890;
+    /** With SRT, put the SRT link in the map marker instead of RTSP. */
+    public boolean mtxSrtLink = false;
     public int bitrateKbps = 4000;
     public boolean cropToFly = true;
     public float flyLeftPct = FlyCrop.DEFAULT_LEFT_PCT;
@@ -29,6 +37,10 @@ public final class Prefs {
     public String takHost = "";
     public int takEnrollPort = 8446;
     public int takStreamPort = 8089;
+    public int takApiPort = 8443;
+    /** True once channels were picked here; until then the server's own selection is left alone. */
+    public boolean takChannelsChosen = false;
+    public Set<String> takChannels = new HashSet<>();
     public String takUser = "";
     public boolean multicastEnabled = true;
 
@@ -57,6 +69,9 @@ public final class Prefs {
         s.mtxUser = p.getString("mtxUser", s.mtxUser);
         s.mtxPass = p.getString("mtxPass", s.mtxPass);
         s.mtxTcp = p.getBoolean("mtxTcp", s.mtxTcp);
+        s.mtxSrt = p.getBoolean("mtxSrt", s.mtxSrt);
+        s.mtxSrtPort = p.getInt("mtxSrtPort", s.mtxSrtPort);
+        s.mtxSrtLink = p.getBoolean("mtxSrtLink", s.mtxSrtLink);
         s.bitrateKbps = p.getInt("bitrateKbps", s.bitrateKbps);
         s.cropToFly = p.getBoolean("cropToFly", s.cropToFly);
         s.flyLeftPct = p.getFloat("flyLeftPct", s.flyLeftPct);
@@ -64,6 +79,10 @@ public final class Prefs {
         s.takHost = p.getString("takHost", s.takHost);
         s.takEnrollPort = p.getInt("takEnrollPort", s.takEnrollPort);
         s.takStreamPort = p.getInt("takStreamPort", s.takStreamPort);
+        s.takApiPort = p.getInt("takApiPort", s.takApiPort);
+        s.takChannelsChosen = p.getBoolean("takChannelsChosen", s.takChannelsChosen);
+        // getStringSet returns the stored instance, which must not be modified.
+        s.takChannels = new HashSet<>(p.getStringSet("takChannels", s.takChannels));
         s.takUser = p.getString("takUser", s.takUser);
         s.multicastEnabled = p.getBoolean("multicastEnabled", s.multicastEnabled);
         s.ridEnabled = p.getBoolean("ridEnabled", s.ridEnabled);
@@ -80,6 +99,9 @@ public final class Prefs {
                 .putString("mtxUser", mtxUser)
                 .putString("mtxPass", mtxPass)
                 .putBoolean("mtxTcp", mtxTcp)
+                .putBoolean("mtxSrt", mtxSrt)
+                .putInt("mtxSrtPort", mtxSrtPort)
+                .putBoolean("mtxSrtLink", mtxSrtLink)
                 .putInt("bitrateKbps", bitrateKbps)
                 .putBoolean("cropToFly", cropToFly)
                 .putFloat("flyLeftPct", flyLeftPct)
@@ -87,6 +109,9 @@ public final class Prefs {
                 .putString("takHost", takHost)
                 .putInt("takEnrollPort", takEnrollPort)
                 .putInt("takStreamPort", takStreamPort)
+                .putInt("takApiPort", takApiPort)
+                .putBoolean("takChannelsChosen", takChannelsChosen)
+                .putStringSet("takChannels", new HashSet<>(takChannels))
                 .putString("takUser", takUser)
                 .putBoolean("multicastEnabled", multicastEnabled)
                 .putBoolean("ridEnabled", ridEnabled)

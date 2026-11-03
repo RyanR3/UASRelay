@@ -1,10 +1,14 @@
 package com.uasrelay;
 
 import android.os.Build;
+import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -12,14 +16,21 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButtonToggleGroup;
+import com.google.android.material.checkbox.MaterialCheckBox;
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.uasrelay.rid.RidScanner;
 import com.uasrelay.tak.TakCertEnroller;
+import com.uasrelay.tak.TakChannels;
 import com.uasrelay.tak.TakQr;
 import com.journeyapps.barcodescanner.ScanContract;
 import com.journeyapps.barcodescanner.ScanOptions;
 
 import java.io.File;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * SettingsActivity — all setup, grouped into cards: drone name, video server, map
@@ -28,11 +39,18 @@ import java.io.File;
  */
 public class SettingsActivity extends AppCompatActivity {
 
-    private EditText callsign, mtxHost, mtxPort, mtxPath, mtxUser, mtxPass, bitrate, flyLeftPct;
-    private EditText takHost, takEnrollPort, takStreamPort, takUser, takPass, ridSerial;
-    private MaterialSwitch mtxTcp, cropToFly, multicast, takEnabled, ridEnabled;
-    private TextView enrollStatus, capability;
-    private View takFields, ridSerialLayout, flyLeftPctLayout;
+    private EditText callsign, mtxHost, mtxPort, mtxSrtPort, mtxPath, mtxUser, mtxPass, bitrate, flyLeftPct;
+    private EditText takHost, takEnrollPort, takStreamPort, takApiPort, takUser, takPass, ridSerial;
+    private MaterialSwitch mtxTcp, mtxSrtLink, cropToFly, multicast, takEnabled, ridEnabled;
+    private TextView enrollStatus, capability, channelStatus;
+    private LinearLayout channelList;
+    /** Carried through read(): the channel picks aren't form fields. */
+    private boolean channelsChosen;
+    private Set<String> channels = new HashSet<>();
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private View takFields, ridSerialLayout, flyLeftPctLayout, mtxSrtPortLayout, mtxSrtLinkHelp;
+    private TextInputLayout mtxPortLayout;
+    private MaterialButtonToggleGroup mtxProtocol;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,6 +63,12 @@ public class SettingsActivity extends AppCompatActivity {
         callsign = findViewById(R.id.callsign);
         mtxHost = findViewById(R.id.mtxHost);
         mtxPort = findViewById(R.id.mtxPort);
+        mtxPortLayout = findViewById(R.id.mtxPortLayout);
+        mtxSrtPort = findViewById(R.id.mtxSrtPort);
+        mtxSrtPortLayout = findViewById(R.id.mtxSrtPortLayout);
+        mtxSrtLink = findViewById(R.id.mtxSrtLink);
+        mtxSrtLinkHelp = findViewById(R.id.mtxSrtLinkHelp);
+        mtxProtocol = findViewById(R.id.mtxProtocol);
         mtxPath = findViewById(R.id.mtxPath);
         mtxUser = findViewById(R.id.mtxUser);
         mtxPass = findViewById(R.id.mtxPass);
@@ -59,6 +83,9 @@ public class SettingsActivity extends AppCompatActivity {
         takHost = findViewById(R.id.takHost);
         takEnrollPort = findViewById(R.id.takEnrollPort);
         takStreamPort = findViewById(R.id.takStreamPort);
+        takApiPort = findViewById(R.id.takApiPort);
+        channelList = findViewById(R.id.channelList);
+        channelStatus = findViewById(R.id.channelStatus);
         takUser = findViewById(R.id.takUser);
         takPass = findViewById(R.id.takPass);
         enrollStatus = findViewById(R.id.enrollStatus);
@@ -78,8 +105,12 @@ public class SettingsActivity extends AppCompatActivity {
         takFields.setVisibility(takEnabled.isChecked() ? View.VISIBLE : View.GONE);
         ridSerialLayout.setVisibility(ridEnabled.isChecked() ? View.VISIBLE : View.GONE);
         flyLeftPctLayout.setVisibility(cropToFly.isChecked() ? View.VISIBLE : View.GONE);
+        mtxProtocol.addOnButtonCheckedListener((g, id, checked) -> { if (checked) showProtocol(); });
+        showProtocol();
 
         findViewById(R.id.enroll).setOnClickListener(v -> enroll());
+        findViewById(R.id.loadChannels).setOnClickListener(v -> loadChannels());
+        if (channelsChosen) channelStatus.setText(channels.size() + (channels.size() == 1 ? " channel" : " channels") + " chosen");
         findViewById(R.id.scanQr).setOnClickListener(v -> qrScan.launch(new ScanOptions()
                 .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
                 .setPrompt("Scan the TAK Server QR code")
@@ -141,6 +172,81 @@ public class SettingsActivity extends AppCompatActivity {
                 })).start();
     }
 
+    /** SRT needs its own port; the RTSP port stays, since viewers may still pull RTSP. */
+    private void showProtocol() {
+        boolean srt = isSrt();
+        mtxSrtPortLayout.setVisibility(srt ? View.VISIBLE : View.GONE);
+        mtxSrtLink.setVisibility(srt ? View.VISIBLE : View.GONE);
+        mtxSrtLinkHelp.setVisibility(srt ? View.VISIBLE : View.GONE);
+        mtxPortLayout.setHint(srt ? "RTSP" : "Port");
+    }
+
+    private boolean isSrt() { return mtxProtocol.getCheckedButtonId() == R.id.protoSrt; }
+
+    /** Fetch this account's channels from the TAK Server and show them as checkboxes. */
+    private void loadChannels() {
+        Prefs p = read();
+        File trust = new File(getFilesDir(), "tak_truststore.p12");
+        File client = new File(getFilesDir(), "tak_clientcert.p12");
+        if (p.takHost.isEmpty() || !trust.exists() || !client.exists()) {
+            channelStatus.setText("Get a certificate first");
+            return;
+        }
+        channelStatus.setText("Loading channels…");
+        new Thread(() -> {
+            try {
+                List<TakChannels.Channel> list = new TakChannels(p.takHost, p.takApiPort,
+                        trust.getAbsolutePath(), client.getAbsolutePath(), TakCertEnroller.P12_PASSWORD).list();
+                runOnUiThread(() -> showChannels(list));
+            } catch (Exception e) {
+                runOnUiThread(() -> channelStatus.setText("Couldn't load channels: " + e.getMessage()));
+            }
+        }, "TakChannels").start();
+    }
+
+    private void showChannels(List<TakChannels.Channel> list) {
+        if (isFinishing()) return;
+        channelList.removeAllViews();
+        if (list.isEmpty()) {
+            channelStatus.setText("This account has no channels");
+            return;
+        }
+        // Until channels are picked here, show (and keep) what the server has now.
+        if (!channelsChosen) {
+            channels.clear();
+            for (TakChannels.Channel c : list) if (c.active) channels.add(c.name);
+        }
+        for (TakChannels.Channel c : list) {
+            MaterialCheckBox box = new MaterialCheckBox(this);
+            box.setText(c.description.isEmpty() ? c.name : c.name + " — " + c.description);
+            box.setChecked(channels.contains(c.name));
+            box.setOnCheckedChangeListener((b, on) -> {
+                if (on) channels.add(c.name); else channels.remove(c.name);
+                channelsChosen = true;
+                read().save(this);
+                showChannelCount(list.size());
+                // Several taps in a row become one update to the server.
+                handler.removeCallbacks(applyChannels);
+                handler.postDelayed(applyChannels, 1500);
+            });
+            channelList.addView(box);
+        }
+        showChannelCount(list.size());
+    }
+
+    private void showChannelCount(int total) {
+        String count = channels.size() + " of " + total + " channels on";
+        channelStatus.setText(!channelsChosen ? count + " (as set on the server)"
+                : RelayService.running ? count + " · sent to TAK Server" : count + " · sent when you start");
+    }
+
+    /** While live, hand the new set to the running service; otherwise it applies on Start. */
+    private final Runnable applyChannels = () -> {
+        if (RelayService.running) {
+            startService(new Intent(this, RelayService.class).setAction(RelayService.ACTION_APPLY_CHANNELS));
+        }
+    };
+
     private void showEnrolled() {
         boolean enrolled = new File(getFilesDir(), "tak_truststore.p12").exists()
                 && new File(getFilesDir(), "tak_clientcert.p12").exists();
@@ -158,6 +264,9 @@ public class SettingsActivity extends AppCompatActivity {
         callsign.setText(p.callsign);
         mtxHost.setText(p.mtxHost);
         mtxPort.setText(String.valueOf(p.mtxPort));
+        mtxSrtPort.setText(String.valueOf(p.mtxSrtPort));
+        mtxProtocol.check(p.mtxSrt ? R.id.protoSrt : R.id.protoRtsp);
+        mtxSrtLink.setChecked(p.mtxSrtLink);
         mtxPath.setText(p.mtxPath);
         mtxUser.setText(p.mtxUser);
         mtxPass.setText(p.mtxPass);
@@ -170,6 +279,9 @@ public class SettingsActivity extends AppCompatActivity {
         takHost.setText(p.takHost);
         takEnrollPort.setText(String.valueOf(p.takEnrollPort));
         takStreamPort.setText(String.valueOf(p.takStreamPort));
+        takApiPort.setText(String.valueOf(p.takApiPort));
+        channelsChosen = p.takChannelsChosen;
+        channels = new HashSet<>(p.takChannels);
         takUser.setText(p.takUser);
         ridEnabled.setChecked(p.ridEnabled);
         ridSerial.setText(p.ridSerial);
@@ -181,6 +293,9 @@ public class SettingsActivity extends AppCompatActivity {
         p.callsign = text(callsign).isEmpty() ? d.callsign : text(callsign);
         p.mtxHost = text(mtxHost);
         p.mtxPort = parseInt(text(mtxPort), d.mtxPort);
+        p.mtxSrt = isSrt();
+        p.mtxSrtPort = parseInt(text(mtxSrtPort), d.mtxSrtPort);
+        p.mtxSrtLink = mtxSrtLink.isChecked();
         p.mtxPath = text(mtxPath).isEmpty() ? d.mtxPath : text(mtxPath);
         p.mtxUser = text(mtxUser);
         p.mtxPass = mtxPass.getText().toString();
@@ -193,6 +308,9 @@ public class SettingsActivity extends AppCompatActivity {
         p.takHost = text(takHost);
         p.takEnrollPort = parseInt(text(takEnrollPort), d.takEnrollPort);
         p.takStreamPort = parseInt(text(takStreamPort), d.takStreamPort);
+        p.takApiPort = parseInt(text(takApiPort), d.takApiPort);
+        p.takChannelsChosen = channelsChosen;
+        p.takChannels = new HashSet<>(channels);
         p.takUser = text(takUser);
         p.ridEnabled = ridEnabled.isChecked();
         p.ridSerial = text(ridSerial);
