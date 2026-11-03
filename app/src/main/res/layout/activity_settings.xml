@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Setup, grouped into cards. Saved when leaving the screen. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        app:navigationContentDescription="Back"
+        app:navigationIcon="?attr/homeAsUpIndicator"
+        app:title="Settings" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingHorizontal="16dp"
+            android:paddingBottom="24dp">
+
+            <!-- Basics -->
+            <com.google.android.material.card.MaterialCardView style="@style/RelayCard">
+                <LinearLayout style="@style/RelayCardBody">
+                    <TextView style="@style/RelayCardTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Drone name" />
+                    <TextView style="@style/RelayHelp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="The label others see on the TAK map." />
+                    <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                        android:hint="Callsign">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/callsign"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textCapWords" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Video -->
+            <com.google.android.material.card.MaterialCardView style="@style/RelayCard">
+                <LinearLayout style="@style/RelayCardBody">
+                    <TextView style="@style/RelayCardTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Video server" />
+                    <TextView style="@style/RelayHelp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="The MediaMTX server the live view is sent to." />
+                    <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                        android:hint="Server address">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/mtxHost"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textUri" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:hint="Port">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/mtxPort"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="number" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                        <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                            android:layout_width="0dp"
+                            android:layout_marginStart="10dp"
+                            android:layout_weight="2"
+                            android:hint="Stream name">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/mtxPath"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="text" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+                        <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:hint="Username (optional)">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/mtxUser"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="text" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                        <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                            android:layout_width="0dp"
+                            android:layout_marginStart="10dp"
+                            android:layout_weight="1"
+                            android:hint="Password"
+                            app:endIconMode="password_toggle">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/mtxPass"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="textPassword" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- CoT -->
+            <com.google.android.material.card.MaterialCardView style="@style/RelayCard">
+                <LinearLayout style="@style/RelayCardBody">
+                    <TextView style="@style/RelayCardTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Map marker" />
+                    <TextView style="@style/RelayHelp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Where to send the drone marker (with the video attached)." />
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/multicast"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Local network / mesh (multicast)" />
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/takEnabled"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="TAK Server" />
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/scanQr"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Scan TAK Server QR code"
+                        app:icon="@drawable/ic_qr" />
+
+                    <LinearLayout
+                        android:id="@+id/takFields"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+                        <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                            android:hint="TAK Server address">
+                            <com.google.android.material.textfield.TextInputEditText
+                                android:id="@+id/takHost"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:inputType="textUri" />
+                        </com.google.android.material.textfield.TextInputLayout>
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+                            <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:hint="Enroll port">
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/takEnrollPort"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="number" />
+                            </com.google.android.material.textfield.TextInputLayout>
+                            <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                                android:layout_width="0dp"
+                                android:layout_marginStart="10dp"
+                                android:layout_weight="1"
+                                android:hint="CoT port">
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/takStreamPort"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="number" />
+                            </com.google.android.material.textfield.TextInputLayout>
+                        </LinearLayout>
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+                            <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                                android:layout_width="0dp"
+                                android:layout_weight="1"
+                                android:hint="Username">
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/takUser"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="text" />
+                            </com.google.android.material.textfield.TextInputLayout>
+                            <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                                android:layout_width="0dp"
+                                android:layout_marginStart="10dp"
+                                android:layout_weight="1"
+                                android:hint="Password"
+                                app:endIconMode="password_toggle">
+                                <com.google.android.material.textfield.TextInputEditText
+                                    android:id="@+id/takPass"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:inputType="textPassword" />
+                            </com.google.android.material.textfield.TextInputLayout>
+                        </LinearLayout>
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/enroll"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="12dp"
+                            android:text="Get certificate" />
+                        <TextView
+                            android:id="@+id/enrollStatus"
+                            style="@style/RelayHelp"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:gravity="center" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Remote ID -->
+            <com.google.android.material.card.MaterialCardView style="@style/RelayCard">
+                <LinearLayout style="@style/RelayCardBody">
+                    <TextView style="@style/RelayCardTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Drone position" />
+                    <TextView style="@style/RelayHelp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Uses the drone's Remote ID broadcast when the phone hears it; otherwise the marker sits at your phone." />
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/ridEnabled"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Listen for Remote ID" />
+                    <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                        android:id="@+id/ridSerialLayout"
+                        android:hint="Drone serial (blank = first heard)">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/ridSerial"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="textCapCharacters" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <TextView
+                        android:id="@+id/capability"
+                        style="@style/RelayHelp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Advanced -->
+            <com.google.android.material.card.MaterialCardView style="@style/RelayCard">
+                <LinearLayout style="@style/RelayCardBody">
+                    <TextView style="@style/RelayCardTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Advanced" />
+                    <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                        android:hint="Video bitrate (kbps)">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/bitrate"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="number" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/mtxTcp"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="Send video over TCP" />
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/cropToFly"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Crop to DJI Fly's picture" />
+                    <com.google.android.material.textfield.TextInputLayout style="@style/RelayField"
+                        android:id="@+id/flyLeftPctLayout"
+                        android:hint="Picture left edge (% of screen)">
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/flyLeftPct"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:inputType="numberDecimal" />
+                    </com.google.android.material.textfield.TextInputLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

@@ -1,0 +1,73 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Release signing credentials live in the gitignored keystore.properties, never here.
+def keystoreProps = new Properties()
+def keystoreFile = rootProject.file('keystore.properties')
+if (keystoreFile.exists()) keystoreFile.withInputStream { keystoreProps.load(it) }
+
+android {
+    namespace 'com.uasrelay'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.uasrelay"
+        // Android 13 baseline: NEARBY_WIFI_DEVICES, BLE5 extended-advertising scan
+        // control for broadcast Remote ID, and the public Wi-Fi IE API.
+        minSdk 33
+        targetSdk 35
+        versionCode 10000
+        versionName "1.0.0"
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        release {
+            if (keystoreProps['storeFile'] != null) {
+                storeFile file(keystoreProps['storeFile'])
+                storePassword keystoreProps['storePassword']
+                keyAlias keystoreProps['keyAlias']
+                keyPassword keystoreProps['keyPassword']
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (keystoreProps['storeFile'] != null) signingConfig signingConfigs.release
+        }
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all { outputFileName = "UASRelay-v${variant.versionName}-${variant.buildType.name}.apk" }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.core:core:1.12.0'
+    implementation 'com.google.android.material:material:1.11.0'
+
+    // Screen capture → H.264 → RTSP push to MediaMTX. Same library/version as ATAKPilot2.
+    implementation 'com.github.pedroSG94.RootEncoder:library:2.5.5'
+
+    // TAK Server QR scanning. Self-contained (no Play Services), works offline.
+    implementation 'com.journeyapps:zxing-android-embedded:4.3.0'
+
+    // CotBuilder/RidParser are pure Java (no Android deps) and covered by JVM unit tests.
+    testImplementation 'junit:junit:4.13.2'
+}
+

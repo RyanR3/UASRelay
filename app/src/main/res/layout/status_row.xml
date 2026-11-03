@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- One status line on the home screen: colored dot, label, current value. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:minHeight="56dp"
+    android:orientation="horizontal">
+
+    <View
+        android:id="@+id/dot"
+        android:layout_width="12dp"
+        android:layout_height="12dp"
+        android:background="@drawable/status_dot"
+        android:backgroundTint="@color/state_off" />
+
+    <TextView
+        android:id="@+id/label"
+        android:layout_width="88dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:textAppearance="?attr/textAppearanceTitleSmall"
+        android:textColor="@color/text" />
+
+    <TextView
+        android:id="@+id/value"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:textAppearance="?attr/textAppearanceBodyMedium"
+        android:textColor="@color/text_muted" />
+</LinearLayout>

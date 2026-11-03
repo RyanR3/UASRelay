@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#121212</color>
+    <color name="surface">#1E1E1E</color>
+    <color name="text">#ECECEC</color>
+    <color name="text_muted">#A0A0A0</color>
+    <color name="outline">#333333</color>
+    <color name="brand">#E0E0E0</color>
+    <color name="on_brand">#121212</color>
+    <color name="brand_container">#2C2C2C</color>
+    <color name="on_brand_container">#ECECEC</color>
+
+    <color name="go">#3A9A63</color>
+    <color name="stop">#D2534A</color>
+
+    <color name="state_off">#5C5C5C</color>
+    <color name="state_pending">#E3A746</color>
+    <color name="state_ok">#4CC27C</color>
+    <color name="state_error">#E5675E</color>
+</resources>
