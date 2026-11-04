@@ -21,6 +21,8 @@ on screen.
   cropped to the flight app's picture so the on-screen controls aren't in the feed. SRT holds
   up better on a lossy uplink (LTE, mesh); MediaMTX re-serves it over RTSP, so the map marker
   keeps a link every TAK app plays.
+- **Low bandwidth mode** for cellular: one switch (Advanced) drops the stream to 720p at
+  15 fps, capped at 1.5 Mbps, still H.264 so every TAK player opens it.
 - **Drone marker with the video attached.** A UAS-type CoT track carrying the stream link,
   refreshed every 2 seconds.
 - **Two ways to send the marker** — use either or both:
@@ -67,6 +69,8 @@ On ATAK, tap the drone marker and open its video to watch.
 
 - Screen sharing captures whatever is on screen. Notifications that pop up while you fly
   will show in the feed.
+- Streaming over cellular? Turn on **Low bandwidth** (Advanced). Towers that can't carry
+  1080p30 at 4 Mbps usually handle 720p15 at 1.5 Mbps.
 - Remote ID position needs the drone to broadcast Remote ID. If the drone or region doesn't,
   the marker uses the phone's GPS.
 - **Crop to DJI Fly's picture** and **Picture left edge** (Advanced) are tuned for DJI Fly on a

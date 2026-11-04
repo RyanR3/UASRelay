@@ -29,6 +29,8 @@ public final class Prefs {
     /** With SRT, put the SRT link in the map marker instead of RTSP. */
     public boolean mtxSrtLink = false;
     public int bitrateKbps = 4000;
+    /** 720p, 15 fps, 1.5 Mbps cap for cellular links ({@link com.uasrelay.video.VideoProfile}). */
+    public boolean lowBandwidth = false;
     public boolean cropToFly = true;
     public float flyLeftPct = FlyCrop.DEFAULT_LEFT_PCT;
 
@@ -73,6 +75,7 @@ public final class Prefs {
         s.mtxSrtPort = p.getInt("mtxSrtPort", s.mtxSrtPort);
         s.mtxSrtLink = p.getBoolean("mtxSrtLink", s.mtxSrtLink);
         s.bitrateKbps = p.getInt("bitrateKbps", s.bitrateKbps);
+        s.lowBandwidth = p.getBoolean("lowBandwidth", s.lowBandwidth);
         s.cropToFly = p.getBoolean("cropToFly", s.cropToFly);
         s.flyLeftPct = p.getFloat("flyLeftPct", s.flyLeftPct);
         s.takEnabled = p.getBoolean("takEnabled", s.takEnabled);
@@ -103,6 +106,7 @@ public final class Prefs {
                 .putInt("mtxSrtPort", mtxSrtPort)
                 .putBoolean("mtxSrtLink", mtxSrtLink)
                 .putInt("bitrateKbps", bitrateKbps)
+                .putBoolean("lowBandwidth", lowBandwidth)
                 .putBoolean("cropToFly", cropToFly)
                 .putFloat("flyLeftPct", flyLeftPct)
                 .putBoolean("takEnabled", takEnabled)
