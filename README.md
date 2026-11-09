@@ -70,7 +70,9 @@ On ATAK, tap the drone marker and open its video to watch.
 - Remote ID position needs the drone to broadcast Remote ID. If the drone or region doesn't,
   the marker uses the phone's GPS.
 - **Crop to DJI Fly's picture** and **Picture left edge** (Advanced) are tuned for DJI Fly on a
-  Galaxy S25. Adjust the left edge for other phones, or turn cropping off for other apps.
+  Galaxy S25. Adjust the left edge for other phones, or turn cropping off for other apps. On a
+  tablet (16:10 or 4:3 screen) the crop takes the 16:9 picture across the full width, centered
+  vertically, and the left edge setting isn't used.
 
 ## Building
 
