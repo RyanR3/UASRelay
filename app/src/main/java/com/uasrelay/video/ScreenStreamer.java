@@ -239,7 +239,8 @@ public class ScreenStreamer {
             stream = s;
             s.startStream(config.pushUrl());
             if (config.srt) handler.postDelayed(srtTimeout, SRT_CONNECT_TIMEOUT_MS);
-            Log.i(TAG, "push=" + config.urlSafe());
+            Log.i(TAG, "push=" + config.urlSafe() + "  " + config.width + "x" + config.height
+                    + "@" + config.fps + " " + config.bitrateBps / 1000 + " kbps");
             listener.onStreamState(false, "Connecting to " + config.urlSafe());
         } catch (Throwable t) {
             Log.e(TAG, "start failed", t);

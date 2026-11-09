@@ -41,7 +41,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     private EditText callsign, mtxHost, mtxPort, mtxSrtPort, mtxPath, mtxUser, mtxPass, bitrate, flyLeftPct;
     private EditText takHost, takEnrollPort, takStreamPort, takApiPort, takUser, takPass, ridSerial;
-    private MaterialSwitch mtxTcp, mtxSrtLink, cropToFly, multicast, takEnabled, ridEnabled;
+    private MaterialSwitch mtxTcp, mtxSrtLink, lowBandwidth, cropToFly, multicast, takEnabled, ridEnabled;
     private TextView enrollStatus, capability, channelStatus;
     private LinearLayout channelList;
     /** Carried through read(): the channel picks aren't form fields. */
@@ -73,6 +73,7 @@ public class SettingsActivity extends AppCompatActivity {
         mtxUser = findViewById(R.id.mtxUser);
         mtxPass = findViewById(R.id.mtxPass);
         bitrate = findViewById(R.id.bitrate);
+        lowBandwidth = findViewById(R.id.lowBandwidth);
         mtxTcp = findViewById(R.id.mtxTcp);
         cropToFly = findViewById(R.id.cropToFly);
         flyLeftPct = findViewById(R.id.flyLeftPct);
@@ -271,6 +272,7 @@ public class SettingsActivity extends AppCompatActivity {
         mtxUser.setText(p.mtxUser);
         mtxPass.setText(p.mtxPass);
         bitrate.setText(String.valueOf(p.bitrateKbps));
+        lowBandwidth.setChecked(p.lowBandwidth);
         mtxTcp.setChecked(p.mtxTcp);
         cropToFly.setChecked(p.cropToFly);
         flyLeftPct.setText(String.valueOf(p.flyLeftPct));
@@ -300,6 +302,7 @@ public class SettingsActivity extends AppCompatActivity {
         p.mtxUser = text(mtxUser);
         p.mtxPass = mtxPass.getText().toString();
         p.bitrateKbps = parseInt(text(bitrate), d.bitrateKbps);
+        p.lowBandwidth = lowBandwidth.isChecked();
         p.mtxTcp = mtxTcp.isChecked();
         p.cropToFly = cropToFly.isChecked();
         p.flyLeftPct = parseFloat(text(flyLeftPct), d.flyLeftPct);
